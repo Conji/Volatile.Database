@@ -28,19 +28,18 @@ namespace Volatile.Db
             {
                 object obj;
                 InputPrac.FromFile(file, out obj);
-                //Table.Add(file.Split('.')[0], obj);
                 Stack.Push(new DatabaseObject(file.Replace(".vdb", "").Split('_')[1], obj));
             }
         }
 
-        public object[] Get()
+        public IEnumerable<object> Get()
         {
             return Stack.Select(s => s.Value).ToArray();
         }
 
-        public object[] Get(Type type)
+        public IEnumerable<T> Get<T>()
         {
-            return Stack.Where(item => item.GetType() == type).Cast<object>().ToArray();
+            return Stack.Select(s => s.Value).Where(i => i.GetType() == typeof (T)).Cast<T>();
         }
 
         public object this[string id]
