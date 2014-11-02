@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -21,7 +22,7 @@ namespace Volatile.Db.Workers
                 .ToList();
         }
 
-        public static object FromFile(string fileName, out object output)
+        public static object FromFile(string fileName, out dynamic output)
         {
             var className = fileName.Split('\\')[fileName.Split('\\').Length - 1].Split('_')[0];
             var type =
@@ -39,6 +40,7 @@ namespace Volatile.Db.Workers
 
                 property.SetValue(output, Converter.ChangeType(value, property.PropertyType));
             }
+            output.OID = Int64.Parse(fileName.Replace(".vdb", "").Split('_')[1]);
             return output;
         }
 

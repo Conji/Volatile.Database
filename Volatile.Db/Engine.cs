@@ -42,23 +42,19 @@ namespace Volatile.Db
             return Stack.Select(s => s.Value).Where(i => i.GetType() == typeof (T)).Cast<T>();
         }
 
-        public object this[string id]
+        public IEnumerable<object> Get(Func<dynamic, bool> func)
         {
-            get { return Stack.First(o => o.Key == id); }
+            return Stack.Where(i => func(i.Value)).Select(i => i.Value);
         }
 
-        public object this[Func<DatabaseObject, bool> obj]
+        public IEnumerable<T> Get<T>(Func<object, bool> func)
         {
-            get { return Stack.First(obj); }
-        }
+            return Stack.Where(i => func(i.Value) && i.Value.GetType() == typeof (T)).Cast<T>();
+        } 
 
         public void Commit()
         {
-            foreach (var item in Stack)
-            {
-
-                InputPrac.ToFile(item);
-            }
+            foreach (var item in Stack) InputPrac.ToFile(item);
         }
 
         public void CommitTop()
@@ -66,25 +62,25 @@ namespace Volatile.Db
             InputPrac.ToFile(Stack.Peek());
         }
 
-        public void Commit(Func<DatabaseObject> function)
+        public void Commit(Func<object, bool> function)
         {
-            InputPrac.ToFile(function());
+            foreach (var item in Stack.Where(item => function(item.Value))) InputPrac.ToFile(item);
         }
 
-        public void Add(object item, bool commit = true)
+        public void Add(dynamic item, bool commit = true)
         {
             //Stack.Push(new DatabaseObject(HashGenerator.Next(), item));
-            if (Stack.Any(i => i.Value == item)) Update(item, commit);
+            if (Stack.Any(i => (i.Value as dynamic).OID == item.OI)) Update(i => i == item, commit);
             else Stack.Push(new DatabaseObject(HashGenerator.Next(), item));
         }
 
-        public void Remove(object item, bool commit = true)
+        public void Remove(dynamic item, bool commit = true)
         {
             var s = new Stack<DatabaseObject>();
             while (Stack.Count > 0)
             {
-                var obj = Stack.Pop();
-                if (item != obj.Value) s.Push(obj);
+                dynamic obj = Stack.Pop();
+                if (item.OID != obj.Value.OID) s.Push(obj);
                 else
                 {
                     foreach (var n in s) Stack.Push(n);
@@ -95,13 +91,13 @@ namespace Volatile.Db
             if (commit) Commit();
         }
 
-        public void Remove(string id, bool commit = true)
+        public void Remove(Func<dynamic, bool> func, bool commit = true)
         {
             var s = new Stack<DatabaseObject>();
             while (Stack.Count > 0)
             {
-                var obj = Stack.Pop();
-                if (id != obj.Key) s.Push(obj);
+                dynamic obj = Stack.Pop();
+                if (!func(obj.Value.OID)) s.Push(obj);
                 else
                 {
                     foreach (var n in s) Stack.Push(n);
@@ -112,14 +108,11 @@ namespace Volatile.Db
             if (commit) Commit();
         }
 
-        public void Update(string id, bool commit = true)
+        public void Update(Func<dynamic, bool> func, bool commit = true)
         {
-            Remove(id, commit);
-        }
-
-        public void Update(object item, bool commit = true)
-        {
+            var item = Get(func);
             Remove(item, commit);
+            Add(item, commit);
         }
     }
 }
