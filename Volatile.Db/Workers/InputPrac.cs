@@ -49,8 +49,7 @@ namespace Volatile.Db.Workers
             var directory = Engine.Instance.Location;
             var thread = new Thread(() =>
             {
-                if (!File.Exists(String.Format(@"{0}\skeletons\{1}.vdbs", Engine.Instance.Location,
-                    input.Value.GetType().FullName))) CreateSkeleton(input.Value.GetType());
+                File.Delete(String.Format(@"{0}\{1}_{2}.vdb", directory, input.Value.GetType().FullName,input.Key));
                 using (var writer = File.OpenWrite(String.Format(@"{0}\{1}_{2}.vdb", directory, input.Value.GetType().FullName,input.Key)))
                 {
                     foreach (var p in input.Value.GetType().GetProperties())

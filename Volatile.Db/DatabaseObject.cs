@@ -21,7 +21,7 @@ namespace Volatile.Db
     public struct DatabaseObject
     {
         public string Key;
-        public object Value;
+        public dynamic Value;
 
         public DatabaseObject(string key, object value)
         {

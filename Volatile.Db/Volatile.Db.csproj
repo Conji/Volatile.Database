@@ -42,6 +42,7 @@
     <Compile Include="DatabaseObject.cs" />
     <Compile Include="Engine.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Volatile.cs" />
     <Compile Include="Workers\Converter.cs" />
     <Compile Include="Workers\HashGenerator.cs" />
     <Compile Include="Workers\InputPrac.cs" />

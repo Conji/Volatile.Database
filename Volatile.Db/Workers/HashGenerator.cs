@@ -11,19 +11,14 @@ namespace Volatile.Db.Workers
     {
         public static string Next(string seed = null)
         {
-            return _softGenerateId(10);
+            return _softGenerateId(8);
         }
         private static Random _random = new Random(DateTime.Now.Millisecond / (int)DateTime.Now.Ticks);
 
         private static string _softGenerateId(int size)
         {
-            var builder = new StringBuilder();
-            for (var i = 0; i < size; i++)
-            {
-                var ch = Convert.ToInt32(Math.Floor(26 * _random.NextDouble() + 65));
-                builder.Append(ch);
-            }
-            return builder.ToString();
+            var rand = new Random(DateTime.Now.Millisecond);
+            return rand.Next(0, 999999999).ToString().Substring(0, size);
         }
     }
 }

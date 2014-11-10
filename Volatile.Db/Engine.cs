@@ -9,7 +9,7 @@ namespace Volatile.Db
     public class Engine
     {
         private static Engine _instance { get; set; }
-        internal Stack<DatabaseObject> Stack { get; set; }
+        internal List<DatabaseObject> Stack { get; set; }
         internal string Location { get; set; }
 
         public static Engine Instance
@@ -19,100 +19,175 @@ namespace Volatile.Db
 
         public Engine(string directory)
         {
-            Stack = new Stack<DatabaseObject>();
+            Stack = new List<DatabaseObject>();
             Location = directory ?? AppDomain.CurrentDomain.BaseDirectory + "\\Volatile";
             if (!Directory.Exists(Location)) Directory.CreateDirectory(Location);
-            if (!Directory.Exists(Location + "\\skeletons")) Directory.CreateDirectory(Location + "\\skeletons");
-            //InputPrac.Initialize();
             foreach (var file in Directory.EnumerateFiles(Location, "*.vdb"))
             {
                 object obj;
                 InputPrac.FromFile(file, out obj);
-                Stack.Push(new DatabaseObject(file.Replace(".vdb", "").Split('_')[1], obj));
+                Stack.Add(new DatabaseObject(file.Replace(".vdb", "").Split('_')[1], obj));
             }
         }
 
-        public IEnumerable<object> Get()
+        /// <summary>
+        /// Returns the stack inside the database.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<dynamic> Get()
         {
             return Stack.Select(s => s.Value).ToArray();
         }
 
+        /// <summary>
+        /// Returns items of the specific type inside the database.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
         public IEnumerable<T> Get<T>()
         {
             return Stack.Select(s => s.Value).Where(i => i.GetType() == typeof (T)).Cast<T>();
         }
 
-        public IEnumerable<object> Get(Func<dynamic, bool> func)
+        public IEnumerable<dynamic> Get(Predicate<dynamic> func)
         {
-            return Stack.Where(i => func(i.Value)).Select(i => i.Value);
+            return Stack.Select(s => s.Value).Where(i => func(i));
         }
 
-        public IEnumerable<T> Get<T>(Func<object, bool> func)
+        public IEnumerable<T> Get<T>(Predicate<dynamic> func)
         {
-            return Stack.Where(i => func(i.Value) && i.Value.GetType() == typeof (T)).Cast<T>();
+            return Stack.Select(s => s.Value).Where(i => func(i) && i.GetType() == typeof (T)).Cast<T>();
         } 
 
+        /// <summary>
+        /// Commits all items from the database to file.
+        /// </summary>
         public void Commit()
         {
             foreach (var item in Stack) InputPrac.ToFile(item);
         }
 
-        public void CommitTop()
+        /// <summary>
+        /// Commits the specific item from the database.
+        /// </summary>
+        /// <param name="function"></param>
+        /// <param name="method">use "put" or "delete"</param>
+        public void Commit(dynamic function, string method = "put")
         {
-            InputPrac.ToFile(Stack.Peek());
+            switch (method.ToLower())
+            {
+                case "put":
+                    foreach (var item in Stack.Where(item => function.OID.ToString() == item.Key)) InputPrac.ToFile(item);
+                    break;
+                case "delete":
+                    foreach (var item in Stack.Where(item => function == item.Value))
+                        File.Delete(Directory.EnumerateFiles(Location).First(i => i.Contains(item.Key)));
+                    break;
+            }
         }
 
-        public void Commit(Func<object, bool> function)
+        /// <summary>
+        /// Commits the specific DatabaseObject from the database.
+        /// </summary>
+        /// <param name="db"></param>
+        /// <param name="method">use "put" or "delete"</param>
+        public void Commit(DatabaseObject db, string method = "put")
         {
-            foreach (var item in Stack.Where(item => function(item.Value))) InputPrac.ToFile(item);
+            switch (method.ToLower())
+            {
+                case "put":
+                    InputPrac.ToFile(db);
+                    break;
+                case "delete":
+                    Commit(db.Value, method);
+                    break;
+            }
         }
 
-        public void Add(dynamic item, bool commit = true)
+        /// <summary>
+        /// Adds the item to the database then returns the item with it's OID.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="commit"></param>
+        /// <returns></returns>
+        public Volatile Add(dynamic item, bool commit = true)
         {
-            //Stack.Push(new DatabaseObject(HashGenerator.Next(), item));
-            if (Stack.Any(i => (i.Value as dynamic).OID == item.OI)) Update(i => i == item, commit);
-            else Stack.Push(new DatabaseObject(HashGenerator.Next(), item));
+            dynamic n = (Volatile)item;
+            var it = long.Parse(HashGenerator.Next());
+            n.OID = it;
+            var db = new DatabaseObject(it.ToString(), n);
+            Stack.Add(db);
+            Commit(db);
+
+            return db.Value;
         }
 
+        /// <summary>
+        /// Removes the item from the database.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="commit"></param>
         public void Remove(dynamic item, bool commit = true)
         {
-            var s = new Stack<DatabaseObject>();
-            while (Stack.Count > 0)
+            foreach (var file in Directory.EnumerateFiles(Location).Where(file => file.Contains(item.OID.ToString())))
             {
-                dynamic obj = Stack.Pop();
-                if (item.OID != obj.Value.OID) s.Push(obj);
-                else
-                {
-                    foreach (var n in s) Stack.Push(n);
-                    return;
-                }
-                foreach (var n in s) Stack.Push(n);
+                File.Delete(file);
             }
-            if (commit) Commit();
+            Stack.RemoveAll(i => ((Volatile) i.Value).OID == item.OID);
         }
 
-        public void Remove(Func<dynamic, bool> func, bool commit = true)
+        /// <summary>
+        /// Removes the item that matches the function from the database.
+        /// </summary>
+        /// <param name="func"></param>
+        /// <param name="commit"></param>
+        public void Remove(Predicate<dynamic> func, bool commit = true)
         {
-            var s = new Stack<DatabaseObject>();
-            while (Stack.Count > 0)
+            foreach (var file in Directory.EnumerateFiles(Location).Where(file => func(file)))
             {
-                dynamic obj = Stack.Pop();
-                if (!func(obj.Value.OID)) s.Push(obj);
-                else
-                {
-                    foreach (var n in s) Stack.Push(n);
-                    return;
-                }
-                foreach (var n in s) Stack.Push(n);
-            }
-            if (commit) Commit();
+                File.Delete(file);
+            } 
+            var i = Stack.First(ind => func(ind));
+            Stack.RemoveAll(ind => i.Equals(ind));
         }
 
-        public void Update(Func<dynamic, bool> func, bool commit = true)
+        /// <summary>
+        /// Updates the specific item in the database using matching OIDs.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="commit"></param>
+        public void Update(dynamic obj, bool commit = true)
         {
-            var item = Get(func);
-            Remove(item, commit);
-            Add(item, commit);
+            var i = 0;
+            while (i < Stack.Count)
+            {
+                if (Stack[i].Value.OID.ToString() == obj.OID.ToString())
+                {
+                    var item = Stack[i];
+                    item.Value = obj;
+                    Stack[i] = item;
+                    break;
+                }
+                i++;
+            }
+            if (commit) Commit(obj);
+        }
+
+        public void Update(string oid, dynamic obj, bool commit = true)
+        {
+            var i = 0;
+            while (i < Stack.Count)
+            {
+                if (Stack[i].Key == oid)
+                {
+                    var item = Stack[i];
+                    item.Value = obj;
+                    Stack[i] = item;
+                    break;
+                }
+                i++;
+            }
+            if (commit) Commit(obj);
         }
     }
 }
