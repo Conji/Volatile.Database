@@ -30,6 +30,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Stdlib.Net">
+      <HintPath>..\..\Stdlib.Net\Stdlib.Net\bin\Debug\Stdlib.Net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -41,6 +44,8 @@
   <ItemGroup>
     <Compile Include="DatabaseObject.cs" />
     <Compile Include="Engine.cs" />
+    <Compile Include="Library\Extensions.cs" />
+    <Compile Include="Library\ReflectionMaster.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Volatile.cs" />
     <Compile Include="Workers\Converter.cs" />

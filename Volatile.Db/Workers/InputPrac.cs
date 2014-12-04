@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
@@ -7,21 +8,12 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using Volatile.Db.Library;
 
 namespace Volatile.Db.Workers
 {
     internal static class InputPrac
     {
-        public static List<Type> Types { get; set; }
-
-        public static void Initialize()
-        {
-            
-            Types = Directory.GetFiles(Engine.Instance.Location + "\\skeletons")
-                .Select(file => Type.GetType(file.Replace(".vdbs", ""), true, true))
-                .ToList();
-        }
-
         public static object FromFile(string fileName, out dynamic output)
         {
             var className = fileName.Split('\\')[fileName.Split('\\').Length - 1].Split('_')[0];
@@ -52,55 +44,19 @@ namespace Volatile.Db.Workers
                 File.Delete(String.Format(@"{0}\{1}_{2}.vdb", directory, input.Value.GetType().FullName,input.Key));
                 using (var writer = File.OpenWrite(String.Format(@"{0}\{1}_{2}.vdb", directory, input.Value.GetType().FullName,input.Key)))
                 {
-                    foreach (var p in input.Value.GetType().GetProperties())
+                    foreach (PropertyInfo p in input.Value.GetType().GetProperties())
                     {
                         var pass = p.GetValue(input.Value, null);
+                        //checks if enum and sets
                         if (p.PropertyType.IsEnum) pass = (int) pass;
+                        // TODO: IEnumerables because they're being fgts.
+                        if (p.PropertyType.IsEnumerableType() && p.PropertyType != typeof(String) && p.PropertyType != typeof(string)) pass = ((object) pass).ArrayStringFromObject();
                         var s = p.Name + "&" + pass + Environment.NewLine;
                         writer.Write(Encoding.UTF8.GetBytes(s), 0, Encoding.UTF8.GetByteCount(s));
                     }
                 }
             });
             thread.Start();
-        }
-
-        public static void CreateSkeleton(Type type)
-        {
-            while (true)
-            {
-                try
-                {
-                    using (
-                        var writer =
-                            File.OpenWrite(String.Format(@"{0}\skeletons\{1}.vdbs", Engine.Instance.Location,
-                                type.FullName))
-                        )
-                    {
-                        foreach (
-                            var s in
-                                type.GetProperties()
-                                    .Select(p => p.Name + "&" + p.PropertyType.FullName + Environment.NewLine))
-                            writer.Write(Encoding.UTF8.GetBytes(s), 0, Encoding.UTF8.GetByteCount(s));
-                        break;
-                    }
-                }
-                catch
-                {
-                    
-                }
-            }
-        }
-
-        public static Type GetPropertyTypeFromSkeleton(string typeName, string propertyName)
-        {
-            return
-                (from line in
-                    File.ReadAllLines(String.Format(@"{0}\skeletons\{1}.vdbs".ToLower(), Engine.Instance.Location,
-                        typeName.ToLower()))
-                    let p = line.Split('&')[0].ToLower()
-                    let v = line.Split('&')[1].ToLower()
-                    where p == propertyName.ToLower()
-                    select Type.GetType(v, true, true)).FirstOrDefault();
         }
 
         public static bool DoesKeyExist(string directoryLocation, string key)

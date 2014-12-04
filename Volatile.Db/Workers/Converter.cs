@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Globalization;
-using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
+using Volatile.Db.Library;
 
 namespace Volatile.Db.Workers
 {
@@ -37,6 +35,32 @@ namespace Volatile.Db.Workers
         public static IEnumerable<string> ToEnumerable(this string value)
         {
             return value.Substring(1, value.Length - 2).Split(',');
+        }
+
+        public static string ArrayToString(this IEnumerable enumerable)
+        {
+            var builder = new StringBuilder();
+            builder.Append("[");
+            foreach (var e in enumerable)
+            {
+                builder.Append(ReflectionMaster.CreateReflectionMapFromObject(e, true) + ",");
+            }
+            builder.Append("]");
+            builder.Replace(",]", "]");
+            return builder.ToString();
+        }
+
+        public static string ArrayStringFromObject(this object input)
+        {
+            try
+            {
+                return ((IEnumerable) input).ArrayToString();
+            }
+            catch
+            {
+                //throw new InvalidCastException();
+                return null;
+            }
         }
 
         public static T EnumParse<T>(this string value, bool ignoreCase)

@@ -68,19 +68,29 @@ namespace Volatile.Db
         }
 
         /// <summary>
+        /// Commits the item in the stack with the OID provided.
+        /// </summary>
+        /// <param name="oid">OID of the committing object</param>
+        /// <param name="method">use "put" or "delete"</param>
+        public void Commit(long oid, string method = "put")
+        {
+            Commit(Stack.Find(s => s.Key == oid.ToString()));
+        }
+
+        /// <summary>
         /// Commits the specific item from the database.
         /// </summary>
-        /// <param name="function"></param>
+        /// <param name="toBeCommitted"></param>
         /// <param name="method">use "put" or "delete"</param>
-        public void Commit(dynamic function, string method = "put")
+        public void Commit(dynamic toBeCommitted, string method = "put")
         {
             switch (method.ToLower())
             {
                 case "put":
-                    foreach (var item in Stack.Where(item => function.OID.ToString() == item.Key)) InputPrac.ToFile(item);
+                    foreach (var item in Stack.Where(item => toBeCommitted.OID.ToString() == item.Key)) InputPrac.ToFile(item);
                     break;
                 case "delete":
-                    foreach (var item in Stack.Where(item => function == item.Value))
+                    foreach (var item in Stack.Where(item => toBeCommitted == item.Value))
                         File.Delete(Directory.EnumerateFiles(Location).First(i => i.Contains(item.Key)));
                     break;
             }
