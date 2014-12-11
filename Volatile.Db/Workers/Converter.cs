@@ -13,6 +13,7 @@ namespace Volatile.Db.Workers
         public static object ChangeType(string value, Type targetType)
         {
             if (String.IsNullOrEmpty(value)) return null;
+            if (value.StartsWith("\"") && value.EndsWith("\"")) return value.Substring(1, value.Length - 2);
             if (targetType == typeof (bool)) return value.ToLower() == "true";
             if (targetType == typeof (Int16)) return Int16.Parse(value.Trim(), NumberStyles.Any);
             if (targetType == typeof (int)) return int.Parse(value.Trim(), NumberStyles.Any);

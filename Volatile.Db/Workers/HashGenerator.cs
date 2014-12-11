@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Stdlib.Net.System;
 
 namespace Volatile.Db.Workers
 {
@@ -17,8 +18,7 @@ namespace Volatile.Db.Workers
 
         private static string _softGenerateId(int size)
         {
-            var rand = new Random(DateTime.Now.Millisecond);
-            return rand.Next(0, 999999999).ToString().Substring(0, size);
+            return Hash.New(size);
         }
     }
 }

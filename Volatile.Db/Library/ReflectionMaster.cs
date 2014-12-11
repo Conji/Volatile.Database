@@ -60,7 +60,7 @@ namespace Volatile.Db.Library
 
                 var eo = value.StartsWith("=>")
                     ? GetDynObjectFromLines(input, GetTypeFromString(value.Replace("=>", "")))
-                    : Converter.ChangeType(value, type);
+                    : Converter.ChangeType(value, property.PropertyType);
                 property.SetValue(output, eo);
                 i++;
             }
